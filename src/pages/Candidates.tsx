@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { SidebarLayout } from "@/components/layouts/SidebarLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,7 +104,6 @@ const Candidates = () => {
       case "screening":
         return <Badge variant="secondary">Screening</Badge>;
       case "interviewed":
-        // Fix: Changed "primary" to "default" to match allowed variants
         return <Badge variant="default" className="bg-blue-100 text-blue-800">Interviewed</Badge>;
       case "offer":
         return <Badge className="bg-green-100 text-green-800">Offer</Badge>;
@@ -154,7 +152,14 @@ const Candidates = () => {
                   <TabsTrigger value="manual">Add Manually</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload" className="py-4">
-                  <FileUpload />
+                  <FileUpload 
+                    onFileSelect={async (file) => {
+                      console.log("Resume file selected:", file.name);
+                    }}
+                    isUploading={false}
+                    acceptedFileTypes=".pdf,.docx"
+                    maxFileSizeMB={5}
+                  />
                 </TabsContent>
                 <TabsContent value="manual" className="py-4 space-y-4">
                   <div className="grid gap-4">
