@@ -16,8 +16,10 @@ const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
 
   const handleUpload = async (file: File) => {
     setIsUploading(true);
+    console.log("Uploading job description:", file.name);
     try {
       const result = await uploadFile(file, 'job');
+      console.log("Job upload result:", result);
       
       if (result.success && result.file) {
         toast({
@@ -28,9 +30,21 @@ const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
         if (onUploadComplete) {
           onUploadComplete(result.file.id);
         }
+      } else {
+        console.error("Upload failed without throwing error:", result.error);
+        toast({
+          title: "Upload failed",
+          description: result.error || "There was an error uploading your job description.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Job upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "There was an error uploading your job description.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }

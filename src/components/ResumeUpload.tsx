@@ -16,8 +16,10 @@ const ResumeUpload = ({ onUploadComplete }: ResumeUploadProps) => {
 
   const handleUpload = async (file: File) => {
     setIsUploading(true);
+    console.log("Uploading resume:", file.name);
     try {
       const result = await uploadFile(file, 'resume');
+      console.log("Resume upload result:", result);
       
       if (result.success && result.file) {
         toast({
@@ -28,9 +30,21 @@ const ResumeUpload = ({ onUploadComplete }: ResumeUploadProps) => {
         if (onUploadComplete) {
           onUploadComplete(result.file.id);
         }
+      } else {
+        console.error("Upload failed without throwing error:", result.error);
+        toast({
+          title: "Upload failed",
+          description: result.error || "There was an error uploading your resume.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Resume upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "There was an error uploading your resume.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }

@@ -14,7 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    const { resume_id, job_id, user_id } = await req.json()
+    console.log("Match documents function called");
+    const requestData = await req.json();
+    const { resume_id, job_id, user_id } = requestData;
+    
+    console.log(`Matching resume ${resume_id} with job ${job_id} for user ${user_id}`);
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,7 +32,12 @@ serve(async (req) => {
       .eq('id', resume_id)
       .single()
     
-    if (resumeError) throw resumeError
+    if (resumeError) {
+      console.error("Resume fetch error:", resumeError);
+      throw resumeError;
+    }
+    
+    console.log("Retrieved resume:", resume.name);
     
     const { data: job, error: jobError } = await supabaseClient
       .from('job_descriptions')
@@ -36,7 +45,12 @@ serve(async (req) => {
       .eq('id', job_id)
       .single()
     
-    if (jobError) throw jobError
+    if (jobError) {
+      console.error("Job fetch error:", jobError);
+      throw jobError;
+    }
+    
+    console.log("Retrieved job description:", job.title);
     
     // In a real application, this would use a more sophisticated algorithm
     // This is a simplified example that calculates match scores
@@ -59,6 +73,8 @@ serve(async (req) => {
       (matchedPreferred.length / Math.max(preferredSkills.length, 1)) * 30
     )
     
+    console.log(`Skills match score: ${skillsScore}%`);
+    
     // Generate random scores for other categories (in a real app, you'd calculate these properly)
     const experienceScore = Math.floor(Math.random() * 30) + 70
     const educationScore = Math.floor(Math.random() * 30) + 70
@@ -69,6 +85,8 @@ serve(async (req) => {
       experienceScore * 0.3 +
       educationScore * 0.2
     )
+    
+    console.log(`Overall match score: ${overallScore}%`);
     
     // Create the match result
     const matchResult = {
@@ -98,6 +116,8 @@ serve(async (req) => {
       user_id
     }
     
+    console.log("Inserting match result into database");
+    
     // Insert the match result into the database
     const { data: result, error: insertError } = await supabaseClient
       .from('match_results')
@@ -105,7 +125,12 @@ serve(async (req) => {
       .select()
       .single()
     
-    if (insertError) throw insertError
+    if (insertError) {
+      console.error("Database insert error:", insertError);
+      throw insertError;
+    }
+    
+    console.log("Match result inserted successfully:", result.id);
     
     return new Response(
       JSON.stringify({

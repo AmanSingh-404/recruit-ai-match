@@ -14,7 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    const { document_type, content, metadata } = await req.json()
+    console.log("Process document function called");
+    const requestData = await req.json();
+    const { document_type, content, metadata } = requestData;
+    
+    console.log(`Processing ${document_type} document, metadata:`, metadata);
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,6 +32,7 @@ serve(async (req) => {
     let result = null
     
     if (document_type === 'resume') {
+      console.log("Processing resume document");
       // Mock resume parsing
       const name = content.match(/([A-Z][a-z]+ [A-Z][a-z]+)/) ? content.match(/([A-Z][a-z]+ [A-Z][a-z]+)/)[0] : 'John Doe'
       const email = content.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) 
@@ -50,6 +55,12 @@ serve(async (req) => {
         metadata
       }
       
+      console.log("Inserting resume into database:", {
+        name: processedData.name,
+        email: processedData.email,
+        skills: skills
+      });
+      
       // Insert into resumes table
       const { data, error } = await supabaseClient
         .from('resumes')
@@ -65,10 +76,16 @@ serve(async (req) => {
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+      
+      console.log("Resume inserted successfully:", data);
       result = data
       
     } else if (document_type === 'job') {
+      console.log("Processing job document");
       // Mock job description parsing
       const titleMatch = content.match(/([A-Z][a-zA-Z]+ [A-Za-z]+)/)
       const title = titleMatch ? titleMatch[0] : 'Software Developer'
@@ -91,6 +108,11 @@ serve(async (req) => {
         metadata
       }
       
+      console.log("Inserting job description into database:", {
+        title: processedData.title,
+        skills: processedData.skills
+      });
+      
       // Insert into job_descriptions table
       const { data, error } = await supabaseClient
         .from('job_descriptions')
@@ -105,7 +127,12 @@ serve(async (req) => {
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+      
+      console.log("Job description inserted successfully:", data);
       result = data
     }
     

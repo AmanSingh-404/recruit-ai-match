@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,6 +29,8 @@ export interface FileMetadata {
  */
 export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Promise<UploadResult> => {
   try {
+    console.log(`Starting upload for ${documentType} file:`, file.name);
+    
     // Check if file is valid (PDF or DOCX)
     const isValidFileType = 
       file.type === "application/pdf" || 
@@ -43,12 +44,21 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
     
     // Read file content
     const content = await readFileAsText(file);
+    console.log(`File content extracted, length: ${content.length} characters`);
     
     // Get user ID
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("Auth error:", userError);
+      throw new Error("Authentication error. Please sign in again.");
+    }
+    
     if (!user) {
+      console.error("No authenticated user found");
       throw new Error("User not authenticated. Please sign in to upload files.");
     }
+    
+    console.log("User authenticated:", user.id);
     
     // File metadata
     const metadata = {
@@ -59,6 +69,8 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
       user_id: user.id
     };
     
+    console.log("Calling process-document edge function with metadata:", metadata);
+    
     // Call Supabase Edge Function to process the document
     const { data, error } = await supabase.functions.invoke("process-document", {
       body: {
@@ -68,12 +80,17 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+    
+    console.log("Document processed successfully:", data);
     
     return {
       success: true,
       file: {
-        id: data.id,
+        id: data.data.id,
         name: file.name,
         size: file.size,
         type: file.type,
@@ -107,11 +124,21 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
  */
 export const matchDocuments = async (resumeId: string, jobId: string): Promise<any> => {
   try {
+    console.log(`Matching resume ${resumeId} with job ${jobId}`);
+    
     // Get user ID
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error("Auth error:", userError);
+      throw new Error("Authentication error. Please sign in again.");
+    }
+    
     if (!user) {
+      console.error("No authenticated user found");
       throw new Error("User not authenticated. Please sign in to match documents.");
     }
+    
+    console.log("User authenticated:", user.id);
     
     // Call Supabase Edge Function to match the documents
     const { data, error } = await supabase.functions.invoke("match-documents", {
@@ -122,7 +149,12 @@ export const matchDocuments = async (resumeId: string, jobId: string): Promise<a
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+    
+    console.log("Documents matched successfully:", data);
     
     return {
       success: true,
@@ -154,14 +186,19 @@ export const matchDocuments = async (resumeId: string, jobId: string): Promise<a
  */
 export const fetchJobDescriptions = async (): Promise<any> => {
   try {
-    // Use a safer approach that doesn't rely on database schema
+    console.log("Fetching job descriptions");
+    
     const { data, error } = await supabase
       .from('job_descriptions')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Database error:", error);
+      throw error;
+    }
     
+    console.log(`Retrieved ${data?.length || 0} job descriptions`);
     return data;
   } catch (error) {
     console.error("Error fetching job descriptions:", error);
@@ -179,14 +216,19 @@ export const fetchJobDescriptions = async (): Promise<any> => {
  */
 export const fetchResumes = async (): Promise<any> => {
   try {
-    // Use a safer approach that doesn't rely on database schema
+    console.log("Fetching resumes");
+    
     const { data, error } = await supabase
       .from('resumes')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Database error:", error);
+      throw error;
+    }
     
+    console.log(`Retrieved ${data?.length || 0} resumes`);
     return data;
   } catch (error) {
     console.error("Error fetching resumes:", error);
@@ -204,7 +246,8 @@ export const fetchResumes = async (): Promise<any> => {
  */
 export const fetchMatchResults = async (): Promise<any> => {
   try {
-    // Use a safer approach that doesn't rely on database schema
+    console.log("Fetching match results");
+    
     const { data, error } = await supabase
       .from('match_results')
       .select(`
@@ -212,10 +255,14 @@ export const fetchMatchResults = async (): Promise<any> => {
         resumes(*),
         job_descriptions(*)
       `)
-      .order('overall_score', { ascending: false });
+      .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Database error:", error);
+      throw error;
+    }
     
+    console.log(`Retrieved ${data?.length || 0} match results`);
     return data;
   } catch (error) {
     console.error("Error fetching match results:", error);
