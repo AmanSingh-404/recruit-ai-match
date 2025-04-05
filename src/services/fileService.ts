@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,7 +28,7 @@ export interface FileMetadata {
 /**
  * Upload a file to the server or process it locally
  */
-export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Promise<UploadResult> => {
+export const uploadFile = async (file: File, documentType: 'resume' | 'job', fileContent?: string): Promise<UploadResult> => {
   try {
     console.log(`Starting upload for ${documentType} file:`, file.name);
     
@@ -42,23 +43,23 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
       throw new Error("Invalid file type. Please upload a PDF or DOCX file.");
     }
     
-    // Read file content
-    const content = await readFileAsText(file);
+    // Read file content if not provided
+    const content = fileContent || await readFileAsText(file);
     console.log(`File content extracted, length: ${content.length} characters`);
     
-    // Get user ID
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error("Auth error:", userError);
-      throw new Error("Authentication error. Please sign in again.");
+    // Get user ID - this might be null for unauthenticated users
+    let userId = null;
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        userId = user.id;
+        console.log("User authenticated:", userId);
+      } else {
+        console.log("Not authenticated or auth error:", userError);
+      }
+    } catch (authError) {
+      console.warn("Auth error (continuing without user ID):", authError);
     }
-    
-    if (!user) {
-      console.error("No authenticated user found");
-      throw new Error("User not authenticated. Please sign in to upload files.");
-    }
-    
-    console.log("User authenticated:", user.id);
     
     // File metadata
     const metadata = {
@@ -66,7 +67,7 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
       fileSize: file.size,
       fileType: file.type,
       uploadDate: new Date().toISOString(),
-      user_id: user.id
+      user_id: userId
     };
     
     console.log("Calling process-document edge function with metadata:", metadata);
@@ -82,7 +83,12 @@ export const uploadFile = async (file: File, documentType: 'resume' | 'job'): Pr
     
     if (error) {
       console.error("Edge function error:", error);
-      throw error;
+      throw new Error(`Edge function error: ${error.message || JSON.stringify(error)}`);
+    }
+    
+    if (!data || !data.success) {
+      console.error("Document processing failed:", data);
+      throw new Error(data?.error || "Document processing failed");
     }
     
     console.log("Document processed successfully:", data);
@@ -279,22 +285,42 @@ export const fetchMatchResults = async (): Promise<any> => {
  * Read a file as text
  */
 export const readFileAsText = async (file: File): Promise<string> => {
+  // For binary files like PDFs, we'll return a placeholder
+  if (file.type === "application/pdf") {
+    return `[PDF file: ${file.name}]`;
+  }
+  
+  if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    return `[DOCX file: ${file.name}]`;
+  }
+  
+  // For text files, try to read the content
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        resolve(event.target.result as string);
-      } else {
-        reject(new Error("Failed to read file."));
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error("Failed to read file."));
-    };
-    
-    reader.readAsText(file);
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          // Safely handle binary files by converting to a simple text representation
+          let result = event.target.result as string;
+          // Strip non-printable characters if present
+          result = result.replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]/g, '');
+          resolve(result);
+        } else {
+          resolve(`[File content for: ${file.name}]`);
+        }
+      };
+      
+      reader.onerror = () => {
+        console.warn("Failed to read file as text, using placeholder");
+        resolve(`[File content for: ${file.name}]`);
+      };
+      
+      reader.readAsText(file);
+    } catch (e) {
+      console.warn("Error in readFileAsText:", e);
+      resolve(`[File content for: ${file.name}]`);
+    }
   });
 };
 

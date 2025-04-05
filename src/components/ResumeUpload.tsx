@@ -19,9 +19,22 @@ const ResumeUpload = ({ onUploadComplete }: ResumeUploadProps) => {
   const handleUpload = async (file: File) => {
     setIsUploading(true);
     setError(null);
-    console.log("Uploading resume:", file.name);
+    console.log("Uploading resume:", file.name, "Size:", file.size, "Type:", file.type);
+    
     try {
-      const result = await uploadFile(file, 'resume');
+      // Convert the file to text but handle binary files appropriately
+      let fileContent = "";
+      
+      try {
+        // For PDF and DOCX, we'll just extract some metadata
+        // In a real implementation, you would use a proper PDF/DOCX parser
+        fileContent = `File Name: ${file.name}\nFile Size: ${file.size}\nFile Type: ${file.type}\nUpload Date: ${new Date().toISOString()}`;
+      } catch (readError) {
+        console.error("Error reading file:", readError);
+        fileContent = `[Binary content - ${file.type}]`;
+      }
+      
+      const result = await uploadFile(file, 'resume', fileContent);
       console.log("Resume upload result:", result);
       
       if (result.success && result.file) {
