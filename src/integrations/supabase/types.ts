@@ -99,6 +99,180 @@ export type Database = {
         }
         Relationships: []
       }
+      interviews: {
+        Row: {
+          candidate_id: string | null
+          created_at: string
+          date: string
+          end_time: string
+          id: string
+          interview_type: string
+          interviewers: Json | null
+          job_id: string | null
+          meeting_details: string | null
+          start_time: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string
+          date: string
+          end_time: string
+          id?: string
+          interview_type: string
+          interviewers?: Json | null
+          job_id?: string | null
+          meeting_details?: string | null
+          start_time: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string
+          date?: string
+          end_time?: string
+          id?: string
+          interview_type?: string
+          interviewers?: Json | null
+          job_id?: string | null
+          meeting_details?: string | null
+          start_time?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interviews_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_descriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_descriptions: {
+        Row: {
+          benefits: Json | null
+          company: string | null
+          created_at: string
+          department: string | null
+          education: Json | null
+          employment_type: string | null
+          experience: Json | null
+          id: string
+          location: string | null
+          metadata: Json | null
+          raw_content: string | null
+          requirements: Json | null
+          responsibilities: Json | null
+          skills: Json | null
+          summary: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          benefits?: Json | null
+          company?: string | null
+          created_at?: string
+          department?: string | null
+          education?: Json | null
+          employment_type?: string | null
+          experience?: Json | null
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          raw_content?: string | null
+          requirements?: Json | null
+          responsibilities?: Json | null
+          skills?: Json | null
+          summary?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          benefits?: Json | null
+          company?: string | null
+          created_at?: string
+          department?: string | null
+          education?: Json | null
+          employment_type?: string | null
+          experience?: Json | null
+          id?: string
+          location?: string | null
+          metadata?: Json | null
+          raw_content?: string | null
+          requirements?: Json | null
+          responsibilities?: Json | null
+          skills?: Json | null
+          summary?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      match_results: {
+        Row: {
+          category_scores: Json | null
+          created_at: string
+          education_analysis: Json | null
+          experience_analysis: Json | null
+          id: string
+          job_id: string | null
+          overall_score: number
+          resume_id: string | null
+          skills_analysis: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          category_scores?: Json | null
+          created_at?: string
+          education_analysis?: Json | null
+          experience_analysis?: Json | null
+          id?: string
+          job_id?: string | null
+          overall_score: number
+          resume_id?: string | null
+          skills_analysis?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          category_scores?: Json | null
+          created_at?: string
+          education_analysis?: Json | null
+          experience_analysis?: Json | null
+          id?: string
+          job_id?: string | null
+          overall_score?: number
+          resume_id?: string | null
+          skills_analysis?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_descriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_results_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       problem_companies: {
         Row: {
           company_id: string
@@ -234,6 +408,60 @@ export type Database = {
           updated_at?: string | null
           username?: string
           xp?: number | null
+        }
+        Relationships: []
+      }
+      resumes: {
+        Row: {
+          certifications: Json | null
+          created_at: string
+          education: Json | null
+          email: string | null
+          experience: Json | null
+          id: string
+          languages: Json | null
+          location: string | null
+          metadata: Json | null
+          name: string
+          phone: string | null
+          raw_content: string | null
+          skills: Json | null
+          summary: string | null
+          user_id: string | null
+        }
+        Insert: {
+          certifications?: Json | null
+          created_at?: string
+          education?: Json | null
+          email?: string | null
+          experience?: Json | null
+          id?: string
+          languages?: Json | null
+          location?: string | null
+          metadata?: Json | null
+          name: string
+          phone?: string | null
+          raw_content?: string | null
+          skills?: Json | null
+          summary?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          certifications?: Json | null
+          created_at?: string
+          education?: Json | null
+          email?: string | null
+          experience?: Json | null
+          id?: string
+          languages?: Json | null
+          location?: string | null
+          metadata?: Json | null
+          name?: string
+          phone?: string | null
+          raw_content?: string | null
+          skills?: Json | null
+          summary?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

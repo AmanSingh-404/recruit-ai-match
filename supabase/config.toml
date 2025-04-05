@@ -1,1 +1,8 @@
+
 project_id = "zvztkshpltevrgcbflfk"
+
+[functions.process-document]
+verify_jwt = true
+
+[functions.match-documents]
+verify_jwt = true
