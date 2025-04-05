@@ -1,95 +1,65 @@
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Upload, File, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
-interface FileItem {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  progress: number;
-  status: "uploading" | "complete" | "error";
+interface FileUploadProps {
+  onFileSelect: (file: File) => Promise<void>;
+  isUploading: boolean;
+  acceptedFileTypes?: string;
+  maxFileSizeMB?: number;
 }
 
-const FileUpload = () => {
-  const [jobDescFiles, setJobDescFiles] = useState<FileItem[]>([]);
-  const [resumeFiles, setResumeFiles] = useState<FileItem[]>([]);
-  const jobDescInputRef = useRef<HTMLInputElement>(null);
-  const resumeInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+const FileUpload = ({ 
+  onFileSelect, 
+  isUploading, 
+  acceptedFileTypes = ".pdf,.docx",
+  maxFileSizeMB = 5 
+}: FileUploadProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    fileType: "job" | "resume"
-  ) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     const files = e.target.files;
-    if (!files) return;
-
-    const newFiles: FileItem[] = Array.from(files).map((file) => ({
-      id: Math.random().toString(36).substring(2, 11),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      progress: 0,
-      status: "uploading",
-    }));
-
-    if (fileType === "job") {
-      setJobDescFiles((prev) => [...prev, ...newFiles]);
-      simulateUpload(newFiles, setJobDescFiles);
-    } else {
-      setResumeFiles((prev) => [...prev, ...newFiles]);
-      simulateUpload(newFiles, setResumeFiles);
+    
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check file type
+    const fileTypeRegex = new RegExp(`(${acceptedFileTypes.split(',').join('|')})$`, 'i');
+    if (!fileTypeRegex.test(file.name)) {
+      setError(`Invalid file type. Accepted types: ${acceptedFileTypes}`);
+      return;
     }
-
-    // Reset the input
-    e.target.value = "";
+    
+    // Check file size
+    if (file.size > maxFileSizeMB * 1024 * 1024) {
+      setError(`File size exceeds the ${maxFileSizeMB}MB limit.`);
+      return;
+    }
+    
+    setSelectedFile(file);
   };
 
-  // Simulate file upload progress
-  const simulateUpload = (
-    files: FileItem[],
-    setFiles: React.Dispatch<React.SetStateAction<FileItem[]>>
-  ) => {
-    files.forEach((file) => {
-      const intervalId = setInterval(() => {
-        setFiles((prevFiles) => {
-          const updatedFiles = prevFiles.map((f) => {
-            if (f.id === file.id) {
-              const newProgress = Math.min(f.progress + 20, 100);
-              // Fix: Explicitly type the status as a union type
-              const newStatus: "uploading" | "complete" | "error" = 
-                newProgress === 100 ? "complete" : "uploading";
-              
-              if (newProgress === 100) {
-                clearInterval(intervalId);
-                toast({
-                  title: "File uploaded successfully",
-                  description: `${f.name} has been uploaded.`,
-                });
-              }
-              
-              return { ...f, progress: newProgress, status: newStatus };
-            }
-            return f;
-          });
-          return updatedFiles;
-        });
-      }, 500);
-    });
-  };
-
-  const removeFile = (id: string, fileType: "job" | "resume") => {
-    if (fileType === "job") {
-      setJobDescFiles((prev) => prev.filter((file) => file.id !== id));
-    } else {
-      setResumeFiles((prev) => prev.filter((file) => file.id !== id));
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      await onFileSelect(selectedFile);
+      // Reset after successful upload
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error("Error in file upload:", error);
+      setError("An error occurred during upload. Please try again.");
     }
   };
 
@@ -100,162 +70,83 @@ const FileUpload = () => {
   };
 
   return (
-    <Tabs defaultValue="job-descriptions" className="w-full">
-      <TabsList className="mb-4 w-full">
-        <TabsTrigger value="job-descriptions" className="w-1/2">
-          <FileText className="h-4 w-4 mr-2" />
-          Job Descriptions
-        </TabsTrigger>
-        <TabsTrigger value="resumes" className="w-1/2">
-          <File className="h-4 w-4 mr-2" />
-          Resumes
-        </TabsTrigger>
-      </TabsList>
+    <div className="w-full">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept={acceptedFileTypes}
+        className="hidden"
+      />
       
-      <TabsContent value="job-descriptions">
-        <Card>
-          <CardContent className="pt-6">
-            <input
-              type="file"
-              ref={jobDescInputRef}
-              onChange={(e) => handleFileSelect(e, "job")}
-              accept=".pdf,.doc,.docx"
-              multiple
-              className="hidden"
-            />
-            
-            <div 
-              onClick={() => jobDescInputRef.current?.click()}
-              className={cn(
-                "border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors",
-                "hover:border-primary/50 hover:bg-muted/50",
-                "flex flex-col items-center"
-              )}
-            >
-              <Upload className="h-8 w-8 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-1">Click to upload job descriptions</p>
-              <p className="text-sm text-muted-foreground mb-2">
-                Supports PDF, DOC, DOCX files
-              </p>
-              <Button type="button">
-                Select Files
-              </Button>
-            </div>
-            
-            {jobDescFiles.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
-                <div className="space-y-2">
-                  {jobDescFiles.map((file) => (
-                    <div 
-                      key={file.id} 
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                    >
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-                        <div>
-                          <p className="text-sm font-medium">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        {file.status === "complete" ? (
-                          <Check className="h-4 w-4 text-green-500 mr-2" />
-                        ) : (
-                          <div className="w-16 mr-2">
-                            <Progress value={file.progress} className="h-1.5" />
-                          </div>
-                        )}
-                        <button 
-                          onClick={() => removeFile(file.id, "job")}
-                          className="p-1 hover:bg-muted rounded"
-                        >
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
+      <div 
+        onClick={() => fileInputRef.current?.click()}
+        className={cn(
+          "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+          "hover:border-primary/50 hover:bg-muted/50",
+          "flex flex-col items-center"
+        )}
+      >
+        <Upload className="h-8 w-8 text-muted-foreground mb-4" />
+        <p className="text-lg font-medium mb-1">Click to select a file</p>
+        <p className="text-sm text-muted-foreground mb-2">
+          {`Supports ${acceptedFileTypes} files up to ${maxFileSizeMB}MB`}
+        </p>
+      </div>
       
-      <TabsContent value="resumes">
-        <Card>
-          <CardContent className="pt-6">
-            <input
-              type="file"
-              ref={resumeInputRef}
-              onChange={(e) => handleFileSelect(e, "resume")}
-              accept=".pdf,.doc,.docx"
-              multiple
-              className="hidden"
-            />
-            
-            <div 
-              onClick={() => resumeInputRef.current?.click()}
-              className={cn(
-                "border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors",
-                "hover:border-primary/50 hover:bg-muted/50",
-                "flex flex-col items-center"
-              )}
-            >
-              <Upload className="h-8 w-8 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-1">Click to upload resumes</p>
-              <p className="text-sm text-muted-foreground mb-2">
-                Supports PDF, DOC, DOCX files
-              </p>
-              <Button type="button">
-                Select Files
-              </Button>
-            </div>
-            
-            {resumeFiles.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
-                <div className="space-y-2">
-                  {resumeFiles.map((file) => (
-                    <div 
-                      key={file.id} 
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
-                    >
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-muted-foreground mr-2" />
-                        <div>
-                          <p className="text-sm font-medium">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(file.size)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        {file.status === "complete" ? (
-                          <Check className="h-4 w-4 text-green-500 mr-2" />
-                        ) : (
-                          <div className="w-16 mr-2">
-                            <Progress value={file.progress} className="h-1.5" />
-                          </div>
-                        )}
-                        <button 
-                          onClick={() => removeFile(file.id, "resume")}
-                          className="p-1 hover:bg-muted rounded"
-                        >
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+      {error && (
+        <div className="mt-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      
+      {selectedFile && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+            <div className="flex items-center">
+              <FileText className="h-5 w-5 text-muted-foreground mr-2" />
+              <div>
+                <p className="text-sm font-medium">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatFileSize(selectedFile.size)}
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+            </div>
+            <div className="flex items-center">
+              {isUploading ? (
+                <div className="w-16 mr-2">
+                  <Progress value={50} className="h-1.5" />
+                </div>
+              ) : (
+                <Button 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpload();
+                  }}
+                  disabled={isUploading}
+                >
+                  Upload
+                </Button>
+              )}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedFile(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+                className="p-1 ml-2 hover:bg-muted rounded"
+                disabled={isUploading}
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

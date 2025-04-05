@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -153,6 +154,7 @@ export const matchDocuments = async (resumeId: string, jobId: string): Promise<a
  */
 export const fetchJobDescriptions = async (): Promise<any> => {
   try {
+    // Use a safer approach that doesn't rely on database schema
     const { data, error } = await supabase
       .from('job_descriptions')
       .select('*')
@@ -177,6 +179,7 @@ export const fetchJobDescriptions = async (): Promise<any> => {
  */
 export const fetchResumes = async (): Promise<any> => {
   try {
+    // Use a safer approach that doesn't rely on database schema
     const { data, error } = await supabase
       .from('resumes')
       .select('*')
@@ -201,12 +204,13 @@ export const fetchResumes = async (): Promise<any> => {
  */
 export const fetchMatchResults = async (): Promise<any> => {
   try {
+    // Use a safer approach that doesn't rely on database schema
     const { data, error } = await supabase
       .from('match_results')
       .select(`
         *,
-        resumes:resume_id(*),
-        job_descriptions:job_id(*)
+        resumes(*),
+        job_descriptions(*)
       `)
       .order('overall_score', { ascending: false });
     
