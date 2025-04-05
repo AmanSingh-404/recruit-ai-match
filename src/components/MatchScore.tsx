@@ -1,7 +1,7 @@
 
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CommandLine, Clock, GraduationCap } from "lucide-react";
+import { Code, Clock, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MatchScoreProps {
@@ -36,7 +36,7 @@ const MatchScore = ({
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
           <div className="flex items-center text-sm">
-            <CommandLine className="h-3.5 w-3.5 mr-1.5" />
+            <Code className="h-3.5 w-3.5 mr-1.5" />
             <span>Skills Match</span>
           </div>
           <Badge variant={getBadgeVariant(skillsMatch)}>
