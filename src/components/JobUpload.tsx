@@ -4,7 +4,8 @@ import FileUpload from "@/components/FileUpload";
 import { uploadFile } from "@/services/fileService";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase } from "lucide-react";
+import { Briefcase, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface JobUploadProps {
   onUploadComplete?: (jobId: string) => void;
@@ -12,10 +13,12 @@ interface JobUploadProps {
 
 const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleUpload = async (file: File) => {
     setIsUploading(true);
+    setError(null);
     console.log("Uploading job description:", file.name);
     try {
       const result = await uploadFile(file, 'job');
@@ -32,6 +35,7 @@ const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
         }
       } else {
         console.error("Upload failed without throwing error:", result.error);
+        setError(result.error || "There was an error uploading your job description.");
         toast({
           title: "Upload failed",
           description: result.error || "There was an error uploading your job description.",
@@ -40,9 +44,11 @@ const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
       }
     } catch (error) {
       console.error("Job upload error:", error);
+      const errorMessage = error instanceof Error ? error.message : "There was an error uploading your job description.";
+      setError(errorMessage);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "There was an error uploading your job description.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -62,6 +68,12 @@ const JobUpload = ({ onUploadComplete }: JobUploadProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <FileUpload 
           onFileSelect={handleUpload}
           isUploading={isUploading}

@@ -16,7 +16,21 @@ serve(async (req) => {
   try {
     console.log("Process document function called");
     const requestData = await req.json();
+    console.log("Request data received:", JSON.stringify(requestData, null, 2));
+    
     const { document_type, content, metadata } = requestData;
+    
+    if (!document_type) {
+      throw new Error("Missing document_type parameter");
+    }
+    
+    if (!content) {
+      throw new Error("Missing content parameter");
+    }
+    
+    if (!metadata) {
+      throw new Error("Missing metadata parameter");
+    }
     
     console.log(`Processing ${document_type} document, metadata:`, metadata);
     
@@ -61,28 +75,33 @@ serve(async (req) => {
         skills: skills
       });
       
-      // Insert into resumes table
-      const { data, error } = await supabaseClient
-        .from('resumes')
-        .insert({
-          name: processedData.name,
-          email: processedData.email,
-          summary: processedData.summary,
-          skills: skills,
-          raw_content: content,
-          metadata: metadata,
-          user_id: metadata.user_id
-        })
-        .select()
-        .single()
-      
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
+      try {
+        // Insert into resumes table
+        const { data, error } = await supabaseClient
+          .from('resumes')
+          .insert({
+            name: processedData.name,
+            email: processedData.email,
+            summary: processedData.summary,
+            skills: skills,
+            raw_content: content,
+            metadata: metadata,
+            user_id: metadata.user_id || null
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          console.error("Database error:", error);
+          throw error;
+        }
+        
+        console.log("Resume inserted successfully:", data);
+        result = data
+      } catch (dbError) {
+        console.error("Database operation failed:", dbError);
+        throw new Error(`Database operation failed: ${dbError.message || JSON.stringify(dbError)}`);
       }
-      
-      console.log("Resume inserted successfully:", data);
-      result = data
       
     } else if (document_type === 'job') {
       console.log("Processing job document");
@@ -113,27 +132,34 @@ serve(async (req) => {
         skills: processedData.skills
       });
       
-      // Insert into job_descriptions table
-      const { data, error } = await supabaseClient
-        .from('job_descriptions')
-        .insert({
-          title: processedData.title,
-          summary: processedData.summary,
-          skills: processedData.skills,
-          raw_content: content,
-          metadata: metadata,
-          user_id: metadata.user_id
-        })
-        .select()
-        .single()
-      
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
+      try {
+        // Insert into job_descriptions table
+        const { data, error } = await supabaseClient
+          .from('job_descriptions')
+          .insert({
+            title: processedData.title,
+            summary: processedData.summary,
+            skills: processedData.skills,
+            raw_content: content,
+            metadata: metadata,
+            user_id: metadata.user_id || null
+          })
+          .select()
+          .single()
+        
+        if (error) {
+          console.error("Database error:", error);
+          throw error;
+        }
+        
+        console.log("Job description inserted successfully:", data);
+        result = data
+      } catch (dbError) {
+        console.error("Database operation failed:", dbError);
+        throw new Error(`Database operation failed: ${dbError.message || JSON.stringify(dbError)}`);
       }
-      
-      console.log("Job description inserted successfully:", data);
-      result = data
+    } else {
+      throw new Error(`Unknown document type: ${document_type}`);
     }
     
     return new Response(
@@ -149,7 +175,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message || "An unknown error occurred"
       }),
       { 
         status: 500,
