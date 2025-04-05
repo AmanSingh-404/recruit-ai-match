@@ -105,7 +105,8 @@ const Candidates = () => {
       case "screening":
         return <Badge variant="secondary">Screening</Badge>;
       case "interviewed":
-        return <Badge variant="primary" className="bg-blue-100 text-blue-800">Interviewed</Badge>;
+        // Fix: Changed "primary" to "default" to match allowed variants
+        return <Badge variant="default" className="bg-blue-100 text-blue-800">Interviewed</Badge>;
       case "offer":
         return <Badge className="bg-green-100 text-green-800">Offer</Badge>;
       default:

@@ -63,7 +63,9 @@ const FileUpload = () => {
           const updatedFiles = prevFiles.map((f) => {
             if (f.id === file.id) {
               const newProgress = Math.min(f.progress + 20, 100);
-              const newStatus = newProgress === 100 ? "complete" : "uploading";
+              // Fix: Explicitly type the status as a union type
+              const newStatus: "uploading" | "complete" | "error" = 
+                newProgress === 100 ? "complete" : "uploading";
               
               if (newProgress === 100) {
                 clearInterval(intervalId);
